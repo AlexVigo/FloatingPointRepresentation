@@ -95,8 +95,9 @@ void MainWindow::createDoubleSpinBox(QBoxLayout* mainLayout)
         bits = bin.i;
         for (size_t i = 0; i < bits.size(); i++)
         {
+            cbVector[i]->disconnect();
             cbVector[i]->setChecked(bits[i]);
-
+            QObject::connect(cbVector[i],  &QCheckBox::stateChanged, this, &MainWindow::fillCheckBoxes);
         }
         std::cout << "Bits "<< bits << std::endl;
         lexactFloatValue->setText(QString::number(bin.f));
