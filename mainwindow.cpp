@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
-#include <bitset>
 #include <iostream>
 #include <QPalette>
 
@@ -18,71 +17,16 @@ MainWindow::MainWindow(QWidget *parent)
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     this->centralWidget()->setLayout(mainLayout);
 
-    QHBoxLayout* floatTextLayout = new QHBoxLayout(this);
-    mainLayout->addLayout(floatTextLayout);
-
-    auto lFloat = new QLabel("Float value:", this);
-    floatTextLayout->addWidget(lFloat);
-    dspFloat = new QDoubleSpinBox(this);
-    dspFloat->setDecimals(sizeof(float_type)*2-1);
-    dspFloat->setMinimum(std::numeric_limits<float_type>::min());
-    dspFloat->setMaximum(std::numeric_limits<float_type>::max());
-
-    floatTextLayout->addWidget(dspFloat);
-
-    QHBoxLayout* cbLayout = new QHBoxLayout(this);
-    cbLayout->setSpacing(2);
-    cbLayout->addStretch();
-    mainLayout->addLayout(cbLayout);
-
-    size_t start_id = 0;
-
-    QString labelsCaptions = "Sign";
-    QWidget* wSign = addCheckBoxes(start_id, 1, labelsCaptions, Qt::green);
-    cbLayout->addWidget(wSign);
-
-    labelsCaptions = "Exponent";
-    QWidget* wExp = addCheckBoxes(start_id, start_id + baseBitsAmount, labelsCaptions, Qt::blue);
-    cbLayout->addWidget(wExp);
-
-    labelsCaptions = "Fraction";
-    QWidget* wMantissa = addCheckBoxes(start_id, cbMax , labelsCaptions, Qt::yellow);
-    cbLayout->addWidget(wMantissa);
-
+    createDoubleSpinBox(mainLayout);
+    createAllCheckboxes(mainLayout);
     mainLayout->addStretch();
-    QHBoxLayout* exactFloatTextLayout = new QHBoxLayout(this);
-    mainLayout->addLayout(exactFloatTextLayout);
 
-    auto lexactFloatText = new QLabel("Exact float value:", this);
-    exactFloatTextLayout->addWidget(lexactFloatText);
-    lexactFloatValue = new QLabel("0", this);
-    exactFloatTextLayout->addWidget(lexactFloatValue);
-
-    QHBoxLayout* exactBinTextLayout = new QHBoxLayout(this);
-    mainLayout->addLayout(exactBinTextLayout);
-
-    auto lexactBinText = new QLabel("Exact binary value:", this);
-    exactBinTextLayout->addWidget(lexactBinText);
-    lexactBinValue = new QLabel("", this);
-    exactBinTextLayout->addWidget(lexactBinValue);
+    createExactValueLabels(mainLayout);
 
     bin.i = 0;
-    std::bitset<sizeof(bin.i)* CHAR_BIT> bits(bin.i);
+    bits = bin.i;
     lexactFloatValue->setText(QString::number(bin.f));
     lexactBinValue->setText(QString::fromStdString(bits.to_string()));
-
-    QObject::connect(dspFloat, &QDoubleSpinBox::textChanged, [&](){
-        bin.f = dspFloat->value();
-        std::bitset<sizeof(bin.i)* CHAR_BIT> bits(bin.i);
-        for (size_t i = 0; i < bits.size(); i++)
-        {
-            cbVector[i]->setChecked(bits[i]);
-
-        }
-        std::cout << "Bits "<< bits << std::endl;
-        lexactFloatValue->setText(QString::number(bin.f));
-        lexactBinValue->setText(QString::fromStdString(bits.to_string()));
-    });
 }
 
 MainWindow::~MainWindow()
@@ -92,7 +36,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::fillCheckBoxes()
 {
-    std::bitset<sizeof(bin.i)* CHAR_BIT> bits(bin.i);
+    bits = bin.i;
     for (size_t i = 0; i < bits.size(); ++i)
     {
         bits[i] = cbVector[i]->isChecked();
@@ -115,7 +59,7 @@ QWidget* MainWindow::addCheckBoxes(size_t &start, const size_t until, QString la
     QVBoxLayout* cbGroupLayoutV = new QVBoxLayout(this);
     cbGroupWidget->setLayout(cbGroupLayoutV);
 
-    auto lcbGroup = new QLabel(labelCaption, cbGroupWidget);
+    QLabel* lcbGroup = new QLabel(labelCaption, cbGroupWidget);
     lcbGroup->setAlignment(Qt::AlignCenter| Qt::AlignVCenter);
     cbGroupLayoutV->addWidget(lcbGroup);
 
@@ -130,5 +74,74 @@ QWidget* MainWindow::addCheckBoxes(size_t &start, const size_t until, QString la
         cbGroupLayout->addWidget(cbBit);
     }
     return cbGroupWidget;
+}
+
+void MainWindow::createDoubleSpinBox(QBoxLayout* mainLayout)
+{
+    QHBoxLayout* floatTextLayout = new QHBoxLayout(this);
+
+    QLabel* lFloat = new QLabel("Float value:", this);
+    floatTextLayout->addWidget(lFloat);
+    dspFloat = new QDoubleSpinBox(this);
+    dspFloat->setDecimals(sizeof(float_type)*2-1);
+    dspFloat->setMinimum(std::numeric_limits<float_type>::min());
+    dspFloat->setMaximum(std::numeric_limits<float_type>::max());
+
+    floatTextLayout->addWidget(dspFloat);
+    mainLayout->addLayout(floatTextLayout);
+
+    QObject::connect(dspFloat, &QDoubleSpinBox::textChanged, [&](){
+        bin.f = dspFloat->value();
+        bits = bin.i;
+        for (size_t i = 0; i < bits.size(); i++)
+        {
+            cbVector[i]->setChecked(bits[i]);
+
+        }
+        std::cout << "Bits "<< bits << std::endl;
+        lexactFloatValue->setText(QString::number(bin.f));
+        lexactBinValue->setText(QString::fromStdString(bits.to_string()));
+    });
+}
+
+void MainWindow::createAllCheckboxes(QBoxLayout* mainLayout)
+{
+    size_t start_id = 0;
+
+    QHBoxLayout* cbLayout = new QHBoxLayout(this);
+    cbLayout->setSpacing(2);
+    cbLayout->addStretch();
+
+    QString labelsCaptions = "Sign";
+    QWidget* wSign = addCheckBoxes(start_id, 1, labelsCaptions, Qt::green);
+    cbLayout->addWidget(wSign);
+
+    labelsCaptions = "Exponent";
+    QWidget* wExp = addCheckBoxes(start_id, start_id + BASE_BITS, labelsCaptions, Qt::blue);
+    cbLayout->addWidget(wExp);
+
+    labelsCaptions = "Fraction";
+    QWidget* wMantissa = addCheckBoxes(start_id, ALL_FLOAT_BITS , labelsCaptions, Qt::yellow);
+    cbLayout->addWidget(wMantissa);
+    mainLayout->addLayout(cbLayout);
+}
+
+void MainWindow::createExactValueLabels(QBoxLayout* mainLayout)
+{
+    QHBoxLayout* exactFloatTextLayout = new QHBoxLayout(this);
+    QLabel* lexactFloatText = new QLabel("Exact float value:", this);
+    exactFloatTextLayout->addWidget(lexactFloatText);
+
+    lexactFloatValue = new QLabel("0", this);
+    exactFloatTextLayout->addWidget(lexactFloatValue);
+    mainLayout->addLayout(exactFloatTextLayout);
+
+    QHBoxLayout* exactBinTextLayout = new QHBoxLayout(this);
+    QLabel* lexactBinText = new QLabel("Exact binary value:", this);
+    exactBinTextLayout->addWidget(lexactBinText);
+
+    lexactBinValue = new QLabel("", this);
+    exactBinTextLayout->addWidget(lexactBinValue);
+    mainLayout->addLayout(exactBinTextLayout);
 }
 
